@@ -633,17 +633,36 @@ const AlertManager = {
      * Load alerts (simulated API call)
      */
     async load() {
+        console.log('Starting to load alerts...');
         UIManager.showLoading();
         
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            // Reduce loading time and add error handling
             setTimeout(() => {
-                AppState.currentAlerts = [...SIMULATED_ALERTS];
-                FilterManager.apply();
-                StatisticsManager.update();
-                this.checkForCriticalAlerts();
-                NotificationManager.show(Utils.translate('alertsRefreshed'), 'success');
-                resolve();
-            }, 1500);
+                try {
+                    console.log('Copying simulated alerts...');
+                    AppState.currentAlerts = [...SIMULATED_ALERTS];
+                    console.log('Alerts loaded:', AppState.currentAlerts.length);
+                    
+                    console.log('Applying filters...');
+                    FilterManager.apply();
+                    
+                    console.log('Updating statistics...');
+                    StatisticsManager.update();
+                    
+                    console.log('Checking for critical alerts...');
+                    this.checkForCriticalAlerts();
+                    
+                    console.log('Showing success notification...');
+                    NotificationManager.show(Utils.translate('alertsRefreshed'), 'success');
+                    
+                    console.log('Alert loading complete!');
+                    resolve();
+                } catch (error) {
+                    console.error('Error during alert loading:', error);
+                    reject(error);
+                }
+            }, 800); // Reduced from 1500ms to 800ms for faster loading
         });
     },
 
@@ -1087,12 +1106,30 @@ const App = {
      * Initialize the application
      */
     async init() {
-        this.setupEventListeners();
-        StorageManager.loadPreferences();
-        await AlertManager.load();
-        AlertManager.requestNotificationPermission();
-        UIManager.updateLanguage();
-        this.startAutoRefresh();
+        try {
+            console.log('Setting up event listeners...');
+            this.setupEventListeners();
+            
+            console.log('Loading user preferences...');
+            StorageManager.loadPreferences();
+            
+            console.log('Loading alerts...');
+            await AlertManager.load();
+            
+            console.log('Requesting notification permission...');
+            AlertManager.requestNotificationPermission();
+            
+            console.log('Updating UI language...');
+            UIManager.updateLanguage();
+            
+            console.log('Starting auto refresh...');
+            this.startAutoRefresh();
+            
+            console.log('App initialization complete!');
+        } catch (error) {
+            console.error('Error during app initialization:', error);
+            throw error;
+        }
     },
 
     /**
@@ -1309,5 +1346,44 @@ function shareAlert() {
 // ========== APPLICATION STARTUP ==========
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    App.init();
+    console.log('DOM loaded, initializing app...');
+    
+    // Quick fallback: Load data immediately if async fails
+    setTimeout(() => {
+        if (AppState.currentAlerts.length === 0) {
+            console.log('Fallback: Loading data immediately...');
+            AppState.currentAlerts = [...SIMULATED_ALERTS];
+            FilterManager.apply();
+            StatisticsManager.update();
+            UIManager.updateLanguage();
+            console.log('Fallback loading complete');
+        }
+    }, 2000);
+    
+    App.init().catch(error => {
+        console.error('App initialization failed:', error);
+        
+        // Emergency fallback
+        console.log('Emergency fallback: Loading basic data...');
+        AppState.currentAlerts = [...SIMULATED_ALERTS];
+        FilterManager.apply();
+        StatisticsManager.update();
+        UIManager.updateLanguage();
+        
+        // Show error notification but continue with basic functionality
+        document.getElementById('alertsContainer').innerHTML = `
+            <div class="alert-card warning">
+                <div class="alert-content" style="text-align: center; padding: 32px;">
+                    <h3 style="color: #ea580c; margin-bottom: 16px;">⚠️ Limited Functionality</h3>
+                    <p style="margin-bottom: 16px;">Some features may not work properly, but basic alert viewing is available.</p>
+                    <button onclick="location.reload()" class="btn-secondary">Refresh Page</button>
+                </div>
+            </div>
+        `;
+        
+        // Still try to render alerts
+        setTimeout(() => {
+            FilterManager.apply();
+        }, 500);
+    });
 });
