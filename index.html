@@ -4,10 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NYC Subway Alerts Pro</title>
+    
+    <!-- CSS -->
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚇</text></svg>">
 </head>
 <body>
     <div class="container">
+        <!-- Header Section -->
         <header class="header">
             <div class="header-controls">
                 <select class="language-selector" onchange="changeLanguage(this.value)" id="languageSelector">
@@ -27,6 +33,7 @@
             <p>Real-time service alerts with smart features and accessibility</p>
         </header>
 
+        <!-- Sound Controls -->
         <div class="sound-section">
             <div class="sound-toggle">
                 <span>🔊 Alert Sounds</span>
@@ -34,6 +41,7 @@
             </div>
         </div>
 
+        <!-- Main Controls -->
         <div class="top-controls">
             <div class="controls">
                 <div class="control-group">
@@ -86,6 +94,7 @@
                 </div>
             </div>
 
+            <!-- Quick Actions -->
             <div class="quick-actions">
                 <button class="btn-primary" onclick="refreshAlerts()">🔄 Refresh</button>
                 <button class="btn-secondary" onclick="toggleRushHourMode()">⏰ Rush Mode</button>
@@ -94,6 +103,7 @@
             </div>
         </div>
 
+        <!-- Statistics Dashboard -->
         <div class="stats">
             <div class="stat-card">
                 <div class="stat-number critical" id="criticalCount">0</div>
@@ -117,6 +127,7 @@
             </div>
         </div>
 
+        <!-- Alerts Container -->
         <div id="alertsContainer" class="alerts-container">
             <div class="loading">
                 <div class="spinner"></div>
@@ -124,6 +135,7 @@
             </div>
         </div>
 
+        <!-- Export Section -->
         <div class="export-section">
             <h3>📤 Export & Share</h3>
             <div class="export-buttons">
@@ -135,6 +147,7 @@
         </div>
     </div>
 
+    <!-- JavaScript -->
     <script src="script.js"></script>
 </body>
 </html>

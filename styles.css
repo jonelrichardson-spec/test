@@ -1,9 +1,9 @@
 /* 
- * NYC Subway Alerts Pro - Main Stylesheet
- * Professional transit alert system with modern design and accessibility features
+ * NYC Subway Alerts Pro - Stylesheet
+ * Modern, accessible subway alert system with theming support
  */
 
-/* CSS Reset and Base Variables */
+/* ========== CSS RESET & ROOT VARIABLES ========== */
 * {
     margin: 0;
     padding: 0;
@@ -11,6 +11,7 @@
 }
 
 :root {
+    /* Light theme colors */
     --bg-primary: #f8fafc;
     --bg-secondary: #ffffff;
     --bg-tertiary: #f1f5f9;
@@ -20,12 +21,14 @@
     --border-color: #e2e8f0;
     --accent-blue: #003087;
     --accent-yellow: #FFD320;
+    
+    /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* Dark Theme Variables */
+/* Dark theme */
 [data-theme="dark"] {
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
@@ -36,7 +39,7 @@
     --border-color: #334155;
 }
 
-/* Base Typography and Layout */
+/* ========== BASE STYLES ========== */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background: var(--bg-primary);
@@ -51,7 +54,7 @@ body {
     margin: 0 auto;
 }
 
-/* Header Styles */
+/* ========== HEADER STYLES ========== */
 .header {
     background: var(--bg-secondary);
     padding: 30px;
@@ -74,6 +77,15 @@ body {
     border-radius: 16px 16px 0 0;
 }
 
+.header-controls {
+    position: absolute;
+    top: 16px;
+    right: 24px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
 .header h1 {
     color: var(--text-primary);
     margin-bottom: 8px;
@@ -88,16 +100,7 @@ body {
     font-weight: 500;
 }
 
-/* Header Controls */
-.header-controls {
-    position: absolute;
-    top: 16px;
-    right: 24px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
+/* ========== CONTROL STYLES ========== */
 .language-selector,
 .theme-toggle,
 .font-size-btn {
@@ -121,7 +124,117 @@ body {
     background: var(--bg-tertiary);
 }
 
-/* Sound Section */
+.top-controls {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.controls {
+    background: var(--bg-secondary);
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+    border: 1px solid var(--border-color);
+    position: relative;
+}
+
+.controls::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-yellow) 100%);
+    border-radius: 16px 16px 0 0;
+}
+
+.quick-actions {
+    background: var(--bg-secondary);
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 200px;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-group label {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ========== FORM ELEMENTS ========== */
+select, button {
+    padding: 12px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+select:focus, button:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.1);
+}
+
+select:hover {
+    border-color: var(--text-muted);
+}
+
+.btn-primary {
+    background: var(--accent-blue);
+    color: white;
+    border: 2px solid var(--accent-blue);
+    cursor: pointer;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.875rem;
+}
+
+.btn-primary:hover {
+    background: #001d3d;
+    border-color: #001d3d;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.btn-secondary:hover {
+    background: var(--border-color);
+}
+
+/* ========== SOUND CONTROLS ========== */
 .sound-section {
     background: var(--bg-secondary);
     padding: 20px;
@@ -170,119 +283,7 @@ body {
     transform: translateX(20px);
 }
 
-/* Control Layout */
-.top-controls {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 24px;
-    margin-bottom: 24px;
-}
-
-.controls {
-    background: var(--bg-secondary);
-    padding: 24px;
-    border-radius: 16px;
-    box-shadow: var(--shadow-md);
-    display: flex;
-    gap: 24px;
-    align-items: center;
-    flex-wrap: wrap;
-    border: 1px solid var(--border-color);
-    position: relative;
-}
-
-.controls::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-yellow) 100%);
-    border-radius: 16px 16px 0 0;
-}
-
-.quick-actions {
-    background: var(--bg-secondary);
-    padding: 24px;
-    border-radius: 16px;
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-width: 200px;
-}
-
-/* Control Groups and Form Elements */
-.control-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.control-group label {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-select, button {
-    padding: 12px 16px;
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-}
-
-select:focus, button:focus {
-    outline: none;
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.1);
-}
-
-select:hover {
-    border-color: var(--text-muted);
-}
-
-/* Button Styles */
-.btn-primary {
-    background: var(--accent-blue);
-    color: white;
-    border: 2px solid var(--accent-blue);
-    cursor: pointer;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-size: 0.875rem;
-}
-
-.btn-primary:hover {
-    background: #001d3d;
-    border-color: #001d3d;
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg);
-}
-
-.btn-secondary {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 0.875rem;
-}
-
-.btn-secondary:hover {
-    background: var(--border-color);
-}
-
-/* Statistics Cards */
+/* ========== STATISTICS DASHBOARD ========== */
 .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -316,6 +317,7 @@ select:hover {
     border-radius: 16px 16px 0 0;
 }
 
+/* Stat card color variants */
 .stat-card:nth-child(1) {
     border: 2px solid #dc2626;
 }
@@ -376,7 +378,7 @@ select:hover {
     font-weight: 600;
 }
 
-/* Severity Color Classes */
+/* Stat number colors */
 .critical { color: #dc2626; }
 .warning { color: #eab308; }
 .info { color: var(--accent-blue); }
@@ -387,7 +389,7 @@ select:hover {
     color: #eab308 !important;
 }
 
-/* Alerts Container and Cards */
+/* ========== ALERT CARDS ========== */
 .alerts-container {
     display: grid;
     gap: 16px;
@@ -418,7 +420,7 @@ select:hover {
     border-radius: 16px 16px 0 0;
 }
 
-/* Alert Card Severity Styles */
+/* Alert severity variants */
 .alert-card.critical {
     border: 3px solid #dc2626;
     background: linear-gradient(to right, rgba(220, 38, 38, 0.05), var(--bg-secondary));
@@ -464,7 +466,7 @@ select:hover {
     border-left: none;
 }
 
-/* Alert Header and Components */
+/* ========== ALERT CARD CONTENT ========== */
 .alert-header {
     padding: 20px 24px;
     background: var(--bg-tertiary);
@@ -523,7 +525,6 @@ select:hover {
     font-weight: 600;
 }
 
-/* Alert Actions */
 .alert-actions {
     display: flex;
     gap: 8px;
@@ -545,7 +546,6 @@ select:hover {
     color: var(--text-primary);
 }
 
-/* Alert Content */
 .alert-content {
     padding: 24px;
 }
@@ -633,29 +633,7 @@ select:hover {
     font-weight: 600;
 }
 
-/* Notifications */
-.notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: var(--accent-blue);
-    color: white;
-    padding: 12px 20px;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    box-shadow: var(--shadow-lg);
-    z-index: 1000;
-    opacity: 0;
-    transform: translateX(100%);
-    transition: all 0.3s ease;
-}
-
-.notification.success { background: #16a34a; }
-.notification.warning { background: #ea580c; }
-.notification.error { background: #dc2626; }
-
-/* Loading Animation */
+/* ========== LOADING & NOTIFICATIONS ========== */
 .loading {
     text-align: center;
     padding: 48px 24px;
@@ -680,7 +658,28 @@ select:hover {
     100% { transform: rotate(360deg); }
 }
 
-/* Export Section */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--accent-blue);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+}
+
+.notification.success { background: #16a34a; }
+.notification.warning { background: #ea580c; }
+.notification.error { background: #dc2626; }
+
+/* ========== EXPORT SECTION ========== */
 .export-section {
     margin-top: 24px;
     padding: 20px;
@@ -695,12 +694,12 @@ select:hover {
     flex-wrap: wrap;
 }
 
-/* Font Size Classes */
+/* ========== FONT SIZE VARIANTS ========== */
 .font-small { font-size: 0.875rem; }
 .font-normal { font-size: 1rem; }
 .font-large { font-size: 1.125rem; }
 
-/* Responsive Design */
+/* ========== RESPONSIVE DESIGN ========== */
 @media (max-width: 1024px) {
     .top-controls {
         grid-template-columns: 1fr;
@@ -743,20 +742,18 @@ select:hover {
     }
 }
 
-/* Print Styles */
+/* ========== PRINT STYLES ========== */
 @media print {
     body { 
         background: white; 
         color: black; 
     }
-    
     .header-controls, 
     .controls, 
     .export-section { 
         display: none; 
     }
-    
-    .alert-card { 
+    .alert-card {
         break-inside: avoid; 
         margin-bottom: 20px; 
     }

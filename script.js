@@ -1,658 +1,1313 @@
-/**
- * NYC Subway Alerts Pro - Main JavaScript Module
- * Handles all interactive functionality and data management
+/*
+ * NYC Subway Alerts Pro - JavaScript Module
+ * Modern ES6+ JavaScript with modular functions and data management
  */
 
-// ========== MODULE IMPORTS & CONFIGURATION ==========
-// Note: In a real application, you might import external libraries here
-// import { format } from 'date-fns'; // Example external library
-// import { debounce } from 'lodash'; // Example utility library
+// ========== CONSTANTS & CONFIGURATION ==========
+const SUBWAY_LINE_COLORS = {
+    '1': '#EE352E', '2': '#EE352E', '3': '#EE352E',
+    '4': '#00933C', '5': '#00933C', '6': '#00933C',
+    '7': '#B933AD',
+    'A': '#0039A6', 'C': '#0039A6', 'E': '#0039A6',
+    'B': '#FF6319', 'D': '#FF6319', 'F': '#FF6319', 'M': '#FF6319',
+    'G': '#6CBE45',
+    'J': '#996633', 'Z': '#996633',
+    'L': '#A7A9AC',
+    'N': '#FCCC0A', 'Q': '#FCCC0A', 'R': '#FCCC0A', 'W': '#FCCC0A',
+    'S': '#808183'
+};
 
-// ========== APPLICATION STATE ==========
+const REFRESH_INTERVAL = 120000; // 2 minutes
+const STORAGE_KEY = 'subwayAlertsPreferences';
+
+// ========== GLOBAL STATE ==========
 const AppState = {
-    currentView: 'geo',
-    filters: {
-        line: 'all',
-        severity: 'all'
-    },
-    alerts: [],
-    stats: {
-        critical: 2,
-        warning: 3,
-        info: 1,
-        good: 18
+    currentAlerts: [],
+    filteredAlerts: [],
+    userPreferences: {
+        soundEnabled: false,
+        rushHourMode: false,
+        currentTheme: 'light',
+        currentFontSize: 'normal',
+        currentLanguage: 'en',
+        userLocation: null
     }
 };
 
-// ========== CONFIGURATION CONSTANTS ==========
-const CONFIG = {
-    NOTIFICATION_DURATION: 2500,
-    ANIMATION_DURATION: 300,
-    REFRESH_INTERVAL: 30000, // 30 seconds
-    API_ENDPOINTS: {
-        alerts: '/api/alerts',
-        stats: '/api/stats'
+// ========== SIMULATED ALERT DATA ==========
+const SIMULATED_ALERTS = [
+    {
+        id: '1',
+        title: 'Service Disruption on 4, 5, 6 Lines',
+        description: 'Due to signal problems at Union Square, expect delays in both directions. Trains are operating with increased travel time of 15-20 minutes.',
+        lines: ['4', '5', '6'],
+        severity: 'critical',
+        timestamp: new Date(Date.now() - 1800000),
+        affectedStations: ['Union Sq', '14 St', 'Astor Pl'],
+        estimatedResolution: new Date(Date.now() + 3600000),
+        isRushHour: true,
+        location: 'manhattan',
+        serviceReliability: 65,
+        walkingDistance: '0.3 miles'
     },
-    LINE_COLORS: {
-        '4': '#00933C',
-        '5': '#00933C', 
-        '6': '#00933C',
-        'L': '#a7a9ac',
-        'N': '#fccc0a',
-        'Q': '#fccc0a',
-        'R': '#fccc0a'
+    {
+        id: '2',
+        title: 'Weekend Service Changes',
+        description: 'L train is not running between 14 St-Union Sq and 8 Av due to planned maintenance work. Free shuttle bus service is available.',
+        lines: ['L'],
+        severity: 'warning',
+        timestamp: new Date(Date.now() - 3600000),
+        affectedStations: ['14 St-Union Sq', '8 Av', '6 Av'],
+        estimatedResolution: new Date(Date.now() + 14400000),
+        isRushHour: false,
+        location: 'manhattan',
+        serviceReliability: 45,
+        walkingDistance: '0.5 miles'
+    },
+    {
+        id: '3',
+        title: 'Express Service Running Local',
+        description: 'N and Q trains are running local in Manhattan due to track work. Allow extra travel time.',
+        lines: ['N', 'Q'],
+        severity: 'warning',
+        timestamp: new Date(Date.now() - 900000),
+        affectedStations: ['Times Sq', 'Herald Sq', 'Union Sq'],
+        estimatedResolution: new Date(Date.now() + 7200000),
+        isRushHour: true,
+        location: 'manhattan',
+        serviceReliability: 75,
+        walkingDistance: '0.2 miles'
+    },
+    {
+        id: '4',
+        title: 'Station Accessibility Update',
+        description: 'Elevator at 59 St-Columbus Circle is back in service. All station levels are now accessible.',
+        lines: ['A', 'B', 'C', 'D'],
+        severity: 'info',
+        timestamp: new Date(Date.now() - 600000),
+        affectedStations: ['59 St-Columbus Circle'],
+        estimatedResolution: null,
+        isRushHour: false,
+        location: 'manhattan',
+        serviceReliability: 95,
+        walkingDistance: '0.8 miles'
+    },
+    {
+        id: '5',
+        title: 'Rush Hour Express Service',
+        description: 'Additional 6 express trains are running during evening rush hours to reduce crowding.',
+        lines: ['6'],
+        severity: 'info',
+        timestamp: new Date(Date.now() - 1200000),
+        affectedStations: ['Multiple stations'],
+        estimatedResolution: new Date(Date.now() + 1800000),
+        isRushHour: true,
+        location: 'manhattan',
+        serviceReliability: 85,
+        walkingDistance: '0.1 miles'
+    },
+    {
+        id: '6',
+        title: 'Brooklyn Service Alert',
+        description: 'F train experiencing minor delays due to train traffic ahead. Expect 5-10 minute delays.',
+        lines: ['F'],
+        severity: 'warning',
+        timestamp: new Date(Date.now() - 2700000),
+        affectedStations: ['Jay St', 'Borough Hall', 'Court St'],
+        estimatedResolution: new Date(Date.now() + 1800000),
+        isRushHour: false,
+        location: 'brooklyn',
+        serviceReliability: 80,
+        walkingDistance: '1.2 miles'
     }
+];
+
+// ========== TRANSLATION SYSTEM ==========
+const TRANSLATIONS = {
+    en: {
+        title: "NYC Subway Alerts Pro",
+        subtitle: "Real-time service alerts with smart features and accessibility",
+        alertSounds: "Alert Sounds",
+        filterByLine: "Filter by Line:",
+        allLines: "All Lines",
+        filterBySeverity: "Filter by Severity:",
+        allSeverities: "All Severities",
+        criticalOnly: "Critical Only",
+        warnings: "Warnings",
+        info: "Info",
+        timeFilter: "Time Filter:",
+        allTimes: "All Times",
+        activeNow: "Active Now",
+        rushHour: "Rush Hour Impact",
+        plannedWork: "Planned Work",
+        location: "Location:",
+        allAreas: "All Areas",
+        nearMe: "📍 Near Me",
+        manhattan: "Manhattan",
+        brooklyn: "Brooklyn",
+        queens: "Queens",
+        bronx: "Bronx",
+        refresh: "🔄 Refresh",
+        rushMode: "⏰ Rush Mode",
+        reset: "🗑️ Reset",
+        criticalAlerts: "Critical Alerts",
+        serviceInfo: "Service Info",
+        goodService: "Good Service",
+        rushHourAlerts: "Rush Hour Alerts",
+        exportShare: "📤 Export & Share",
+        exportJSON: "📄 Export JSON",
+        exportCSV: "📊 Export CSV",
+        printView: "🖨️ Print View",
+        shareSummary: "📱 Share Summary",
+        loadingAlerts: "Loading subway alerts...",
+        noAlertsFound: "✅ No Alerts Found",
+        noAlertsMessage: "No service alerts match your current filters. Try adjusting your criteria or check back later.",
+        share: "📱 Share",
+        directions: "🗺️ Directions",
+        affectedStations: "Affected Stations:",
+        serviceStatus: "Service Status:",
+        estimatedResolution: "Est. Resolution:",
+        away: "away",
+        updated: "📅 Updated:",
+        refreshing: "⏳ Refreshing...",
+        alertsRefreshed: "Alerts refreshed successfully!",
+        settingsRestored: "Settings restored from",
+        minutesAgo: "minutes ago",
+        soundsEnabled: "Sounds enabled",
+        soundsDisabled: "Sounds disabled",
+        gettingLocation: "Getting your location...",
+        locationFound: "Location found! Filtering nearby alerts.",
+        locationError: "Could not get location. Please enable location services.",
+        locationNotSupported: "Location not supported by your browser.",
+        rushHourModeOn: "Rush Hour Mode ON",
+        rushHourModeOff: "Rush Hour Mode OFF",
+        exported: "Exported",
+        alertsAs: "alerts as",
+        alertCopied: "Alert copied to clipboard!",
+        summaryCopied: "Alert summary copied to clipboard!",
+        preferencesCleared: "All preferences cleared!",
+        justNow: "Just now",
+        minAgo: "min ago",
+        hoursAgo: "hours ago",
+        critical: "critical",
+        warning: "warning",
+        serviceReliability: {
+            excellent: "🟢 Excellent",
+            good: "🟡 Good", 
+            fair: "🟠 Fair",
+            poor: "🔴 Poor",
+            veryPoor: "⛔ Very Poor"
+        },
+        fontSizes: {
+            normal: "Normal Text",
+            large: "Large Text",
+            small: "Small Text"
+        },
+        themeToggle: {
+            dark: "🌙 Dark",
+            light: "☀️ Light"
+        }
+    },
+    es: {
+        title: "Alertas del Metro de NYC Pro",
+        subtitle: "Alertas de servicio en tiempo real con funciones inteligentes y accesibilidad",
+        alertSounds: "Sonidos de Alerta",
+        filterByLine: "Filtrar por Línea:",
+        allLines: "Todas las Líneas",
+        filterBySeverity: "Filtrar por Severidad:",
+        allSeverities: "Todas las Severidades",
+        criticalOnly: "Solo Críticas",
+        warnings: "Advertencias",
+        info: "Información",
+        timeFilter: "Filtro de Tiempo:",
+        allTimes: "Todos los Tiempos",
+        activeNow: "Activo Ahora",
+        rushHour: "Impacto de Hora Pico",
+        plannedWork: "Trabajo Planificado",
+        location: "Ubicación:",
+        allAreas: "Todas las Áreas",
+        nearMe: "📍 Cerca de Mí",
+        manhattan: "Manhattan",
+        brooklyn: "Brooklyn",
+        queens: "Queens",
+        bronx: "Bronx",
+        refresh: "🔄 Actualizar",
+        rushMode: "⏰ Modo Hora Pico",
+        reset: "🗑️ Restablecer",
+        criticalAlerts: "Alertas Críticas",
+        serviceInfo: "Info del Servicio",
+        goodService: "Buen Servicio",
+        rushHourAlerts: "Alertas de Hora Pico",
+        exportShare: "📤 Exportar y Compartir",
+        exportJSON: "📄 Exportar JSON",
+        exportCSV: "📊 Exportar CSV",
+        printView: "🖨️ Vista de Impresión",
+        shareSummary: "📱 Compartir Resumen",
+        loadingAlerts: "Cargando alertas del metro...",
+        noAlertsFound: "✅ No se Encontraron Alertas",
+        noAlertsMessage: "Ninguna alerta de servicio coincide con sus filtros actuales. Intente ajustar sus criterios o vuelva más tarde.",
+        share: "📱 Compartir",
+        directions: "🗺️ Direcciones",
+        affectedStations: "Estaciones Afectadas:",
+        serviceStatus: "Estado del Servicio:",
+        estimatedResolution: "Resolución Estimada:",
+        away: "de distancia",
+        updated: "📅 Actualizado:",
+        refreshing: "⏳ Actualizando...",
+        alertsRefreshed: "¡Alertas actualizadas con éxito!",
+        settingsRestored: "Configuración restaurada desde hace",
+        minutesAgo: "minutos",
+        soundsEnabled: "Sonidos habilitados",
+        soundsDisabled: "Sonidos deshabilitados",
+        gettingLocation: "Obteniendo su ubicación...",
+        locationFound: "¡Ubicación encontrada! Filtrando alertas cercanas.",
+        locationError: "No se pudo obtener la ubicación. Habilite los servicios de ubicación.",
+        locationNotSupported: "Ubicación no compatible con su navegador.",
+        rushHourModeOn: "Modo Hora Pico ACTIVADO",
+        rushHourModeOff: "Modo Hora Pico DESACTIVADO",
+        exported: "Exportadas",
+        alertsAs: "alertas como",
+        alertCopied: "¡Alerta copiada al portapapeles!",
+        summaryCopied: "¡Resumen de alerta copiado al portapapeles!",
+        preferencesCleared: "¡Todas las preferencias eliminadas!",
+        justNow: "Ahora mismo",
+        minAgo: "min atrás",
+        hoursAgo: "horas atrás",
+        critical: "crítico",
+        warning: "advertencia",
+        serviceReliability: {
+            excellent: "🟢 Excelente",
+            good: "🟡 Bueno",
+            fair: "🟠 Regular", 
+            poor: "🔴 Malo",
+            veryPoor: "⛔ Muy Malo"
+        },
+        fontSizes: {
+            normal: "Texto Normal",
+            large: "Texto Grande",
+            small: "Texto Pequeño"
+        },
+        themeToggle: {
+            dark: "🌙 Oscuro",
+            light: "☀️ Claro"
+        }
+    }
+    // Additional languages can be added here (fr, ja)
 };
 
 // ========== UTILITY FUNCTIONS ==========
-/**
- * Debounce function to limit rapid successive calls
- */
-const debounce = (func, wait) => {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-};
+const Utils = {
+    /**
+     * Translation helper function
+     * @param {string} key - Translation key (supports dot notation)
+     * @returns {string} Translated text
+     */
+    translate(key) {
+        const keys = key.split('.');
+        let value = TRANSLATIONS[AppState.userPreferences.currentLanguage];
+        
+        for (const k of keys) {
+            value = value?.[k];
+            if (value === undefined) {
+                return TRANSLATIONS.en[key] || key;
+            }
+        }
+        return value;
+    },
 
-/**
- * Get DOM element with error handling
- */
-const getElement = (selector) => {
-    const element = document.querySelector(selector);
-    if (!element) {
-        console.warn(`Element not found: ${selector}`);
-    }
-    return element;
-};
+    /**
+     * Format timestamp relative to current time
+     * @param {Date} timestamp - The timestamp to format
+     * @returns {string} Formatted time string
+     */
+    formatTimestamp(timestamp) {
+        const now = new Date();
+        const diff = now - timestamp;
+        const minutes = Math.floor(diff / 60000);
+        
+        if (minutes < 1) return this.translate('justNow');
+        if (minutes < 60) return `${minutes} ${this.translate('minAgo')}`;
+        
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours} ${this.translate('hoursAgo')}`;
+        
+        return timestamp.toLocaleDateString();
+    },
 
-/**
- * Add event listener with error handling
- */
-const addEventListenerSafe = (element, event, handler) => {
-    if (element && typeof handler === 'function') {
-        element.addEventListener(event, handler);
-    } else {
-        console.warn('Invalid element or handler for event listener');
+    /**
+     * Format time in 12-hour format
+     * @param {Date} date - Date object to format
+     * @returns {string} Formatted time string
+     */
+    formatTime(date) {
+        return date.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+        });
+    },
+
+    /**
+     * Get service reliability indicator
+     * @param {number} percentage - Reliability percentage
+     * @returns {string} Reliability indicator with emoji
+     */
+    getServiceReliabilityIndicator(percentage) {
+        if (percentage >= 90) return this.translate('serviceReliability.excellent');
+        if (percentage >= 75) return this.translate('serviceReliability.good');
+        if (percentage >= 60) return this.translate('serviceReliability.fair');
+        if (percentage >= 40) return this.translate('serviceReliability.poor');
+        return this.translate('serviceReliability.veryPoor');
+    },
+
+    /**
+     * Convert data to CSV format
+     * @param {Array} data - Array of objects to convert
+     * @returns {string} CSV formatted string
+     */
+    convertToCSV(data) {
+        if (data.length === 0) return '';
+        
+        const headers = Object.keys(data[0]);
+        const csvContent = [
+            headers.join(','),
+            ...data.map(row => headers.map(header => `"${row[header]}"`).join(','))
+        ].join('\n');
+        
+        return csvContent;
+    },
+
+    /**
+     * Download file to user's device
+     * @param {string} content - File content
+     * @param {string} filename - Name of file
+     * @param {string} contentType - MIME type
+     */
+    downloadFile(content, filename, contentType) {
+        const blob = new Blob([content], { type: contentType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
 };
 
 // ========== NOTIFICATION SYSTEM ==========
-class NotificationManager {
-    constructor() {
-        this.container = getElement('#notificationContainer') || document.body;
-        this.activeNotifications = new Set();
-    }
-
+const NotificationManager = {
     /**
-     * Show notification with specified message and type
+     * Show notification to user
+     * @param {string} message - Notification message
+     * @param {string} type - Notification type (info, success, warning, error)
      */
     show(message, type = 'info') {
-        const notification = this.createNotification(message, type);
-        this.container.appendChild(notification);
-        this.activeNotifications.add(notification);
-
-        // Trigger animation
-        requestAnimationFrame(() => {
-            notification.classList.add('show');
-        });
-
-        // Auto-remove after delay
-        setTimeout(() => {
-            this.remove(notification);
-        }, CONFIG.NOTIFICATION_DURATION);
-
-        return notification;
-    }
-
-    /**
-     * Create notification DOM element
-     */
-    createNotification(message, type) {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
+        document.body.appendChild(notification);
         
-        // Add click to dismiss
-        notification.addEventListener('click', () => {
-            this.remove(notification);
-        });
-
-        return notification;
-    }
-
-    /**
-     * Remove notification with animation
-     */
-    remove(notification) {
-        if (this.activeNotifications.has(notification)) {
-            notification.classList.remove('show');
-            
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-                this.activeNotifications.delete(notification);
-            }, CONFIG.ANIMATION_DURATION);
-        }
-    }
-
-    /**
-     * Clear all notifications
-     */
-    clearAll() {
-        this.activeNotifications.forEach(notification => {
-            this.remove(notification);
-        });
-    }
-}
-
-// ========== MAP MANAGEMENT ==========
-class MapManager {
-    constructor() {
-        this.currentView = AppState.currentView;
-        this.initializeEventListeners();
-    }
-
-    /**
-     * Initialize map-related event listeners
-     */
-    initializeEventListeners() {
-        // View toggle buttons
-        document.querySelectorAll('.map-view-btn').forEach(btn => {
-            addEventListenerSafe(btn, 'click', (e) => {
-                const view = e.target.dataset.view;
-                if (view && view !== this.currentView) {
-                    this.switchView(view);
-                }
-            });
-        });
-
-        // Station markers (geographic view)
-        document.querySelectorAll('.station-marker').forEach(marker => {
-            addEventListenerSafe(marker, 'click', (e) => {
-                const station = e.target.dataset.station;
-                if (station) {
-                    this.handleStationClick(station);
-                }
-            });
-        });
-
-        // Station groups (schematic view)
-        document.querySelectorAll('.station-group').forEach(group => {
-            addEventListenerSafe(group, 'click', (e) => {
-                const station = e.currentTarget.dataset.station;
-                if (station) {
-                    this.handleStationClick(station);
-                }
-            });
-        });
-
-        // Subway lines
-        document.querySelectorAll('.subway-line').forEach(line => {
-            addEventListenerSafe(line, 'click', (e) => {
-                const lineCode = e.target.dataset.line;
-                if (lineCode) {
-                    this.handleLineClick(lineCode);
-                }
-            });
-        });
-
-        // Borough areas
-        document.querySelectorAll('.borough').forEach(borough => {
-            addEventListenerSafe(borough, 'click', (e) => {
-                const boroughName = e.target.dataset.borough;
-                if (boroughName) {
-                    this.handleBoroughClick(boroughName);
-                }
-            });
-        });
-    }
-
-    /**
-     * Switch between map views
-     */
-    switchView(view) {
-        if (this.currentView === view) return;
-
-        // Update button states
-        document.querySelectorAll('.map-view-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.view === view);
-        });
-
-        // Switch map displays
-        document.querySelectorAll('.map-view').forEach(mapView => {
-            mapView.classList.toggle('active', mapView.id === `${view}Map`);
-        });
-
-        this.currentView = view;
-        AppState.currentView = view;
-
-        // Show confirmation
-        notificationManager.show(`Switched to ${view === 'geo' ? 'Geographic' : 'Schematic'} view`, 'success');
-    }
-
-    /**
-     * Handle station click events
-     */
-    handleStationClick(stationName) {
-        const stationInfo = this.getStationInfo(stationName);
-        if (stationInfo) {
-            notificationManager.show(`Station: ${stationName} - ${stationInfo.status}`, stationInfo.type);
-            this.highlightStation(stationName);
-        }
-    }
-
-    /**
-     * Handle subway line click events
-     */
-    handleLineClick(lineCode) {
-        const lineInfo = this.getLineInfo(lineCode);
-        if (lineInfo) {
-            notificationManager.show(`${lineCode} Line: ${lineInfo.status}`, lineInfo.type);
-            filterManager.setLineFilter(lineCode);
-        }
-    }
-
-    /**
-     * Handle borough click events
-     */
-    handleBoroughClick(boroughName) {
-        const formattedName = boroughName.charAt(0).toUpperCase() + boroughName.slice(1);
-        notificationManager.show(`Viewing ${formattedName} stations`, 'info');
-    }
-
-    /**
-     * Get station information
-     */
-    getStationInfo(stationName) {
-        const stationData = {
-            'Union Sq': { status: 'Critical Service Issues', type: 'error' },
-            '14 St': { status: 'Service Warning', type: 'warning' },
-            '8 Ave': { status: 'Service Disrupted', type: 'warning' },
-            'Times Sq': { status: 'Normal Service', type: 'success' }
-        };
-        return stationData[stationName] || { status: 'Unknown Status', type: 'info' };
-    }
-
-    /**
-     * Get line information
-     */
-    getLineInfo(lineCode) {
-        const lineData = {
-            '456': { status: 'Service Delays', type: 'error' },
-            'L': { status: 'Weekend Service Changes', type: 'warning' },
-            'NQR': { status: 'Normal Service', type: 'success' }
-        };
-        return lineData[lineCode] || { status: 'Unknown Status', type: 'info' };
-    }
-
-    /**
-     * Highlight station on map
-     */
-    highlightStation(stationName) {
-        // Remove existing highlights
-        document.querySelectorAll('.station-highlight').forEach(el => {
-            el.classList.remove('station-highlight');
-        });
-
-        // Add highlight to current station
-        const stationElements = document.querySelectorAll(`[data-station="${stationName}"]`);
-        stationElements.forEach(element => {
-            element.classList.add('station-highlight');
-            setTimeout(() => {
-                element.classList.remove('station-highlight');
-            }, 3000);
-        });
-    }
-}
-
-// ========== FILTER MANAGEMENT ==========
-class FilterManager {
-    constructor() {
-        this.lineFilter = getElement('#lineFilter');
-        this.severityFilter = getElement('#severityFilter');
-        this.initializeEventListeners();
-    }
-
-    /**
-     * Initialize filter event listeners
-     */
-    initializeEventListeners() {
-        if (this.lineFilter) {
-            addEventListenerSafe(this.lineFilter, 'change', 
-                debounce((e) => this.handleLineFilter(e.target.value), 300)
-            );
-        }
-
-        if (this.severityFilter) {
-            addEventListenerSafe(this.severityFilter, 'change', 
-                debounce((e) => this.handleSeverityFilter(e.target.value), 300)
-            );
-        }
-    }
-
-    /**
-     * Handle line filter changes
-     */
-    handleLineFilter(lineValue) {
-        AppState.filters.line = lineValue;
-        this.applyFilters();
+        // Animate in
+        setTimeout(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translateX(0)';
+        }, 100);
         
-        const filterText = lineValue === 'all' ? 'All Lines' : `Line ${lineValue}`;
-        notificationManager.show(`Filtering by: ${filterText}`, 'info');
+        // Animate out and remove
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
     }
+};
 
+// ========== SOUND SYSTEM ==========
+const SoundManager = {
     /**
-     * Handle severity filter changes
+     * Play notification sound
+     * @param {string} type - Sound type (critical, warning, info, refresh)
      */
-    handleSeverityFilter(severityValue) {
-        AppState.filters.severity = severityValue;
-        this.applyFilters();
-        
-        const filterText = severityValue === 'all' ? 'All Severities' : 
-            severityValue.charAt(0).toUpperCase() + severityValue.slice(1);
-        notificationManager.show(`Filtering by: ${filterText}`, 'info');
-    }
-
-    /**
-     * Set line filter programmatically
-     */
-    setLineFilter(lineValue) {
-        if (this.lineFilter) {
-            this.lineFilter.value = lineValue;
-            this.handleLineFilter(lineValue);
-        }
-    }
-
-    /**
-     * Apply current filters to alert cards
-     */
-    applyFilters() {
-        const alertCards = document.querySelectorAll('.alert-card');
-        
-        alertCards.forEach(card => {
-            const cardLines = card.dataset.lines;
-            const cardSeverity = card.dataset.severity;
-            
-            const lineMatch = AppState.filters.line === 'all' || 
-                (cardLines && cardLines.includes(AppState.filters.line));
-            
-            const severityMatch = AppState.filters.severity === 'all' || 
-                cardSeverity === AppState.filters.severity;
-            
-            if (lineMatch && severityMatch) {
-                card.style.display = 'block';
-                card.classList.add('fade-in');
-            } else {
-                card.style.display = 'none';
-                card.classList.remove('fade-in');
-            }
-        });
-
-        this.updateVisibleAlertCount();
-    }
-
-    /**
-     * Update count of visible alerts
-     */
-    updateVisibleAlertCount() {
-        const visibleAlerts = document.querySelectorAll('.alert-card[style*="block"], .alert-card:not([style*="none"])').length;
-        const totalAlerts = document.querySelectorAll('.alert-card').length;
-        
-        // Update UI indicator if it exists
-        const countElement = getElement('#alertCount');
-        if (countElement) {
-            countElement.textContent = `${visibleAlerts} of ${totalAlerts}`;
-        }
-    }
-
-    /**
-     * Reset all filters
-     */
-    resetFilters() {
-        AppState.filters.line = 'all';
-        AppState.filters.severity = 'all';
-        
-        if (this.lineFilter) this.lineFilter.value = 'all';
-        if (this.severityFilter) this.severityFilter.value = 'all';
-        
-        this.applyFilters();
-        notificationManager.show('Filters reset', 'success');
-    }
-}
-
-// ========== DATA MANAGEMENT ==========
-class DataManager {
-    constructor() {
-        this.lastRefresh = null;
-        this.refreshInterval = null;
-        this.isRefreshing = false;
-    }
-
-    /**
-     * Initialize data refresh system
-     */
-    initialize() {
-        this.startAutoRefresh();
-        this.lastRefresh = new Date();
-    }
-
-    /**
-     * Start automatic data refresh
-     */
-    startAutoRefresh() {
-        this.refreshInterval = setInterval(() => {
-            this.refreshData();
-        }, CONFIG.REFRESH_INTERVAL);
-    }
-
-    /**
-     * Stop automatic data refresh
-     */
-    stopAutoRefresh() {
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-            this.refreshInterval = null;
-        }
-    }
-
-    /**
-     * Manual data refresh
-     */
-    async refreshData() {
-        if (this.isRefreshing) return;
-        
-        this.isRefreshing = true;
-        const refreshBtn = getElement('#refreshBtn');
+    play(type) {
+        if (!AppState.userPreferences.soundEnabled) return;
         
         try {
-            // Update UI to show loading state
-            if (refreshBtn) {
-                refreshBtn.disabled = true;
-                refreshBtn.innerHTML = '⟳ Refreshing...';
-            }
-
-            // Simulate API call (replace with real API calls)
-            await this.simulateDataFetch();
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
             
-            this.updateStats();
-            this.lastRefresh = new Date();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
             
-            notificationManager.show('Alerts refreshed successfully!', 'success');
+            const frequencies = {
+                'critical': 800,
+                'warning': 600,
+                'info': 400,
+                'refresh': 700
+            };
             
+            oscillator.frequency.setValueAtTime(frequencies[type] || 500, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.2);
         } catch (error) {
-            console.error('Refresh failed:', error);
-            notificationManager.show('Failed to refresh alerts', 'error');
-        } finally {
-            // Restore UI state
-            if (refreshBtn) {
-                refreshBtn.disabled = false;
-                refreshBtn.innerHTML = '🔄 Refresh';
-            }
-            this.isRefreshing = false;
+            console.log('Sound playback failed:', error);
         }
     }
+};
+
+// ========== STORAGE MANAGER ==========
+const StorageManager = {
+    /**
+     * Save user preferences to localStorage
+     */
+    savePreferences() {
+        const preferences = {
+            lineFilter: document.getElementById('lineFilter').value,
+            severityFilter: document.getElementById('severityFilter').value,
+            timeFilter: document.getElementById('timeFilter').value,
+            locationFilter: document.getElementById('locationFilter').value,
+            soundEnabled: AppState.userPreferences.soundEnabled,
+            theme: AppState.userPreferences.currentTheme,
+            fontSize: AppState.userPreferences.currentFontSize,
+            rushHourMode: AppState.userPreferences.rushHourMode,
+            language: AppState.userPreferences.currentLanguage,
+            lastUpdated: new Date().toISOString()
+        };
+        
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+        } catch (error) {
+            console.log('Could not save preferences:', error);
+        }
+    },
 
     /**
-     * Simulate data fetching (replace with real API calls)
+     * Load user preferences from localStorage
      */
-    async simulateDataFetch() {
-        return new Promise(resolve => {
-            setTimeout(() => {
-                // Simulate slight variations in stats
-                AppState.stats.critical = Math.max(0, AppState.stats.critical + Math.floor(Math.random() * 3) - 1);
-                AppState.stats.warning = Math.max(0, AppState.stats.warning + Math.floor(Math.random() * 3) - 1);
-                resolve();
-            }, 1000);
-        });
-    }
+    loadPreferences() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (!saved) return;
 
+            const preferences = JSON.parse(saved);
+            
+            // Update form elements
+            document.getElementById('lineFilter').value = preferences.lineFilter || 'all';
+            document.getElementById('severityFilter').value = preferences.severityFilter || 'all';
+            document.getElementById('timeFilter').value = preferences.timeFilter || 'all';
+            document.getElementById('locationFilter').value = preferences.locationFilter || 'all';
+            
+            // Update app state
+            AppState.userPreferences.soundEnabled = preferences.soundEnabled || false;
+            AppState.userPreferences.currentTheme = preferences.theme || 'light';
+            AppState.userPreferences.currentFontSize = preferences.fontSize || 'normal';
+            AppState.userPreferences.rushHourMode = preferences.rushHourMode || false;
+            AppState.userPreferences.currentLanguage = preferences.language || 'en';
+            
+            // Apply preferences
+            document.getElementById('languageSelector').value = AppState.userPreferences.currentLanguage;
+            ThemeManager.apply(AppState.userPreferences.currentTheme);
+            SoundManager.applySoundSettings();
+            FontManager.apply(AppState.userPreferences.currentFontSize);
+            
+            // Show restoration notification
+            if (preferences.lastUpdated) {
+                const lastUpdated = new Date(preferences.lastUpdated);
+                const timeDiff = new Date() - lastUpdated;
+                const minutesAgo = Math.floor(timeDiff / 60000);
+                
+                if (minutesAgo < 60) {
+                    setTimeout(() => {
+                        NotificationManager.show(
+                            `${Utils.translate('settingsRestored')} ${minutesAgo} ${Utils.translate('minutesAgo')}`,
+                            'info'
+                        );
+                    }, 1000);
+                }
+            }
+        } catch (error) {
+            console.log('Could not load saved preferences:', error);
+        }
+    },
+
+    /**
+     * Clear all stored preferences
+     */
+    clearPreferences() {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch (error) {
+            console.log('Could not clear preferences:', error);
+        }
+    }
+};
+
+// ========== THEME MANAGER ==========
+const ThemeManager = {
+    /**
+     * Toggle between light and dark themes
+     */
+    toggle() {
+        const newTheme = AppState.userPreferences.currentTheme === 'light' ? 'dark' : 'light';
+        this.apply(newTheme);
+        AppState.userPreferences.currentTheme = newTheme;
+        StorageManager.savePreferences();
+    },
+
+    /**
+     * Apply specific theme
+     * @param {string} theme - Theme name ('light' or 'dark')
+     */
+    apply(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        const toggle = document.querySelector('.theme-toggle');
+        toggle.textContent = theme === 'light' 
+            ? Utils.translate('themeToggle.dark') 
+            : Utils.translate('themeToggle.light');
+        AppState.userPreferences.currentTheme = theme;
+    }
+};
+
+// ========== FONT MANAGER ==========
+const FontManager = {
+    /**
+     * Change font size
+     * @param {string} size - Font size ('small', 'normal', 'large')
+     */
+    change(size) {
+        this.apply(size);
+        AppState.userPreferences.currentFontSize = size;
+        StorageManager.savePreferences();
+    },
+
+    /**
+     * Apply font size to document
+     * @param {string} size - Font size to apply
+     */
+    apply(size) {
+        document.body.className = document.body.className.replace(/font-\w+/g, '');
+        document.body.classList.add(`font-${size}`);
+    }
+};
+
+// ========== LOCATION MANAGER ==========
+const LocationManager = {
+    /**
+     * Request user's current location
+     */
+    request() {
+        if (!('geolocation' in navigator)) {
+            NotificationManager.show(Utils.translate('locationNotSupported'), 'error');
+            return;
+        }
+
+        NotificationManager.show(Utils.translate('gettingLocation'), 'info');
+        
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                AppState.userPreferences.userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                NotificationManager.show(Utils.translate('locationFound'), 'success');
+                document.getElementById('locationFilter').value = 'nearme';
+                FilterManager.apply();
+                StorageManager.savePreferences();
+            },
+            error => {
+                NotificationManager.show(Utils.translate('locationError'), 'error');
+                console.log('Geolocation error:', error);
+            }
+        );
+    }
+};
+
+// ========== ALERT MANAGER ==========
+const AlertManager = {
+    /**
+     * Load alerts (simulated API call)
+     */
+    async load() {
+        UIManager.showLoading();
+        
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                AppState.currentAlerts = [...SIMULATED_ALERTS];
+                FilterManager.apply();
+                StatisticsManager.update();
+                this.checkForCriticalAlerts();
+                NotificationManager.show(Utils.translate('alertsRefreshed'), 'success');
+                resolve();
+            }, 1500);
+        });
+    },
+
+    /**
+     * Check for critical alerts and notify user
+     */
+    checkForCriticalAlerts() {
+        const criticalAlerts = AppState.currentAlerts.filter(alert => alert.severity === 'critical');
+        
+        if (criticalAlerts.length > 0) {
+            criticalAlerts.forEach(() => SoundManager.play('critical'));
+            
+            // Browser notifications
+            if ('Notification' in window && Notification.permission === 'granted') {
+                criticalAlerts.forEach(alert => {
+                    new Notification(`${Utils.translate('critical')}: ${alert.title}`, {
+                        body: alert.description.substring(0, 100) + '...',
+                        icon: '/favicon.ico'
+                    });
+                });
+            }
+        }
+    },
+
+    /**
+     * Request notification permission
+     */
+    requestNotificationPermission() {
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+};
+
+// ========== FILTER MANAGER ==========
+const FilterManager = {
+    /**
+     * Apply all active filters to alerts
+     */
+    apply() {
+        const lineFilter = document.getElementById('lineFilter').value;
+        const severityFilter = document.getElementById('severityFilter').value;
+        const timeFilter = document.getElementById('timeFilter').value;
+        const locationFilter = document.getElementById('locationFilter').value;
+
+        AppState.filteredAlerts = AppState.currentAlerts.filter(alert => {
+            return this.matchesLineFilter(alert, lineFilter) &&
+                   this.matchesSeverityFilter(alert, severityFilter) &&
+                   this.matchesTimeFilter(alert, timeFilter) &&
+                   this.matchesLocationFilter(alert, locationFilter) &&
+                   this.matchesRushHourMode(alert);
+        });
+
+        UIManager.renderAlerts();
+        StatisticsManager.update();
+    },
+
+    /**
+     * Check if alert matches line filter
+     */
+    matchesLineFilter(alert, filter) {
+        if (filter === 'all') return true;
+        
+        return alert.lines.some(line => {
+            switch (filter) {
+                case '123': return ['1', '2', '3'].includes(line);
+                case '456': return ['4', '5', '6'].includes(line);
+                case '7': return line === '7';
+                case 'ACE': return ['A', 'C', 'E'].includes(line);
+                case 'BDFM': return ['B', 'D', 'F', 'M'].includes(line);
+                case 'G': return line === 'G';
+                case 'JZ': return ['J', 'Z'].includes(line);
+                case 'L': return line === 'L';
+                case 'NQR': return ['N', 'Q', 'R', 'W'].includes(line);
+                case 'S': return line === 'S';
+                default: return false;
+            }
+        });
+    },
+
+    /**
+     * Check if alert matches severity filter
+     */
+    matchesSeverityFilter(alert, filter) {
+        return filter === 'all' || alert.severity === filter;
+    },
+
+    /**
+     * Check if alert matches time filter
+     */
+    matchesTimeFilter(alert, filter) {
+        switch (filter) {
+            case 'all':
+                return true;
+            case 'active':
+                return !alert.estimatedResolution || alert.estimatedResolution > new Date();
+            case 'rush':
+                return alert.isRushHour;
+            case 'planned':
+                return alert.severity === 'info';
+            default:
+                return true;
+        }
+    },
+
+    /**
+     * Check if alert matches location filter
+     */
+    matchesLocationFilter(alert, filter) {
+        if (filter === 'all') return true;
+        if (filter === 'nearme' && AppState.userPreferences.userLocation) {
+            return parseFloat(alert.walkingDistance) < 1.0;
+        }
+        if (filter !== 'all' && filter !== 'nearme') {
+            return alert.location === filter;
+        }
+        return true;
+    },
+
+    /**
+     * Check if alert matches rush hour mode
+     */
+    matchesRushHourMode(alert) {
+        return !AppState.userPreferences.rushHourMode || alert.isRushHour;
+    }
+};
+
+// ========== UI MANAGER ==========
+const UIManager = {
+    /**
+     * Update all UI text based on current language
+     */
+    updateLanguage() {
+        // Header
+        document.querySelector('.header h1').innerHTML = `🚇 ${Utils.translate('title')}`;
+        document.querySelector('.header p').textContent = Utils.translate('subtitle');
+        
+        // Theme toggle button
+        const themeToggle = document.querySelector('.theme-toggle');
+        themeToggle.textContent = AppState.userPreferences.currentTheme === 'light' 
+            ? Utils.translate('themeToggle.dark') 
+            : Utils.translate('themeToggle.light');
+        
+        // Font size selector
+        const fontOptions = document.querySelectorAll('.font-size-btn option');
+        fontOptions[0].textContent = Utils.translate('fontSizes.normal');
+        fontOptions[1].textContent = Utils.translate('fontSizes.large');
+        fontOptions[2].textContent = Utils.translate('fontSizes.small');
+        
+        // Sound section
+        document.querySelector('.sound-toggle span').innerHTML = `🔊 ${Utils.translate('alertSounds')}`;
+        
+        // Control labels
+        document.querySelector('label[for="lineFilter"]').textContent = Utils.translate('filterByLine');
+        document.querySelector('label[for="severityFilter"]').textContent = Utils.translate('filterBySeverity');
+        document.querySelector('label[for="timeFilter"]').textContent = Utils.translate('timeFilter');
+        document.querySelector('label[for="locationFilter"]').textContent = Utils.translate('location');
+        
+        // Update filter options
+        this.updateFilterOptions();
+        
+        // Quick action buttons
+        const quickActionButtons = document.querySelectorAll('.quick-actions button');
+        quickActionButtons[0].innerHTML = Utils.translate('refresh');
+        quickActionButtons[1].innerHTML = Utils.translate('rushMode');
+        quickActionButtons[2].innerHTML = Utils.translate('reset');
+        quickActionButtons[3].innerHTML = `📍 ${Utils.translate('nearMe').replace('📍 ', '')}`;
+        
+        // Stats labels
+        const statLabels = document.querySelectorAll('.stat-label');
+        statLabels[0].textContent = Utils.translate('criticalAlerts');
+        statLabels[1].textContent = Utils.translate('warnings');
+        statLabels[2].textContent = Utils.translate('serviceInfo');
+        statLabels[3].textContent = Utils.translate('goodService');
+        statLabels[4].textContent = Utils.translate('rushHourAlerts');
+        
+        // Export section
+        document.querySelector('.export-section h3').innerHTML = Utils.translate('exportShare');
+        const exportButtons = document.querySelectorAll('.export-buttons button');
+        exportButtons[0].innerHTML = Utils.translate('exportJSON');
+        exportButtons[1].innerHTML = Utils.translate('exportCSV');
+        exportButtons[2].innerHTML = Utils.translate('printView');
+        exportButtons[3].innerHTML = Utils.translate('shareSummary');
+        
+        // Re-render alerts if they exist
+        if (AppState.filteredAlerts.length > 0) {
+            this.renderAlerts();
+        }
+    },
+
+    /**
+     * Update filter dropdown options
+     */
+    updateFilterOptions() {
+        // Line filter options
+        const lineFilterOptions = document.querySelectorAll('#lineFilter option');
+        lineFilterOptions[0].textContent = Utils.translate('allLines');
+        
+        // Severity filter options  
+        const severityFilterOptions = document.querySelectorAll('#severityFilter option');
+        severityFilterOptions[0].textContent = Utils.translate('allSeverities');
+        severityFilterOptions[1].textContent = Utils.translate('criticalOnly');
+        severityFilterOptions[2].textContent = Utils.translate('warnings');
+        severityFilterOptions[3].textContent = Utils.translate('info');
+        
+        // Time filter options
+        const timeFilterOptions = document.querySelectorAll('#timeFilter option');
+        timeFilterOptions[0].textContent = Utils.translate('allTimes');
+        timeFilterOptions[1].textContent = Utils.translate('activeNow');
+        timeFilterOptions[2].textContent = Utils.translate('rushHour');
+        timeFilterOptions[3].textContent = Utils.translate('plannedWork');
+        
+        // Location filter options
+        const locationFilterOptions = document.querySelectorAll('#locationFilter option');
+        locationFilterOptions[0].textContent = Utils.translate('allAreas');
+        locationFilterOptions[1].textContent = Utils.translate('nearMe');
+        locationFilterOptions[2].textContent = Utils.translate('manhattan');
+        locationFilterOptions[3].textContent = Utils.translate('brooklyn');
+        locationFilterOptions[4].textContent = Utils.translate('queens');
+        locationFilterOptions[5].textContent = Utils.translate('bronx');
+    },
+
+    /**
+     * Show loading spinner
+     */
+    showLoading() {
+        document.getElementById('alertsContainer').innerHTML = `
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>${Utils.translate('loadingAlerts')}</p>
+            </div>
+        `;
+    },
+
+    /**
+     * Render alerts to the DOM
+     */
+    renderAlerts() {
+        const container = document.getElementById('alertsContainer');
+        
+        if (AppState.filteredAlerts.length === 0) {
+            container.innerHTML = `
+                <div class="alert-card">
+                    <div class="alert-content" style="text-align: center; padding: 48px;">
+                        <h3 style="color: var(--good-service); margin-bottom: 16px; font-size: 1.5rem;">
+                            ${Utils.translate('noAlertsFound')}
+                        </h3>
+                        <p style="color: var(--text-muted);">
+                            ${Utils.translate('noAlertsMessage')}
+                        </p>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = AppState.filteredAlerts.map(alert => `
+            <div class="alert-card ${alert.severity}">
+                <div class="alert-header">
+                    <div class="alert-meta">
+                        <div class="alert-lines">
+                            ${alert.lines.map(line => `
+                                <span class="line-badge" style="background-color: ${SUBWAY_LINE_COLORS[line] || '#666'}">
+                                    ${line}
+                                </span>
+                            `).join('')}
+                        </div>
+                        <span class="severity-badge ${alert.severity}">
+                            ${Utils.translate(alert.severity)}
+                        </span>
+                        ${alert.isRushHour ? `<span class="rush-hour-badge">${Utils.translate('rushHour')}</span>` : ''}
+                    </div>
+                    <div class="alert-actions">
+                        <button class="action-btn" onclick="ShareManager.shareAlert('${alert.id}')">${Utils.translate('share')}</button>
+                        <button class="action-btn" onclick="DirectionsManager.get('${alert.affectedStations[0]}')">${Utils.translate('directions')}</button>
+                    </div>
+                </div>
+                <div class="alert-content">
+                    <h3 class="alert-title">${alert.title}</h3>
+                    <p class="alert-description">${alert.description}</p>
+                    <div class="alert-details">
+                        <div><strong>${Utils.translate('affectedStations')}</strong> ${alert.affectedStations.join(', ')}</div>
+                        <div><strong>${Utils.translate('serviceStatus')}</strong> ${Utils.getServiceReliabilityIndicator(alert.serviceReliability)}</div>
+                        ${alert.estimatedResolution ? `<div><strong>${Utils.translate('estimatedResolution')}</strong> ${Utils.formatTime(alert.estimatedResolution)}</div>` : ''}
+                        <div class="location-info">📍 ${alert.walkingDistance} ${Utils.translate('away')}</div>
+                    </div>
+                    <div class="alert-footer">
+                        <span class="timestamp">
+                            ${Utils.translate('updated')} ${Utils.formatTimestamp(alert.timestamp)}
+                        </span>
+                        <span style="color: var(--accent-blue); font-weight: 600;">
+                            📍 ${Utils.translate(alert.location)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+};
+
+// ========== STATISTICS MANAGER ==========
+const StatisticsManager = {
     /**
      * Update statistics display
      */
-    updateStats() {
-        const elements = {
-            critical: getElement('#criticalCount'),
-            warning: getElement('#warningCount'),
-            info: getElement('#infoCount'),
-            good: getElement('#goodCount')
+    update() {
+        const stats = {
+            critical: AppState.currentAlerts.filter(a => a.severity === 'critical').length,
+            warning: AppState.currentAlerts.filter(a => a.severity === 'warning').length,
+            info: AppState.currentAlerts.filter(a => a.severity === 'info').length,
+            rushHour: AppState.currentAlerts.filter(a => a.isRushHour).length
         };
 
-        Object.entries(elements).forEach(([key, element]) => {
-            if (element && AppState.stats[key] !== undefined) {
-                element.textContent = AppState.stats[key];
-                element.classList.add('slide-in');
+        // Calculate good service lines
+        const linesWithIssues = new Set();
+        AppState.currentAlerts.forEach(alert => {
+            if (alert.severity === 'critical') {
+                alert.lines.forEach(line => linesWithIssues.add(line));
             }
         });
-    }
-}
-
-// ========== GLOBAL INSTANCES ==========
-let notificationManager;
-let mapManager;
-let filterManager;
-let dataManager;
-
-// ========== MAIN APPLICATION INITIALIZATION ==========
-/**
- * Initialize the application when DOM is loaded
- */
-function initializeApp() {
-    try {
-        // Initialize managers
-        notificationManager = new NotificationManager();
-        mapManager = new MapManager();
-        filterManager = new FilterManager();
-        dataManager = new DataManager();
-
-        // Set up refresh button
-        const refreshBtn = getElement('#refreshBtn');
-        if (refreshBtn) {
-            addEventListenerSafe(refreshBtn, 'click', () => {
-                dataManager.refreshData();
-            });
-        }
-
-        // Initialize data management
-        dataManager.initialize();
-
-        // Add keyboard shortcuts
-        addKeyboardShortcuts();
-
-        // Show welcome notification
-        setTimeout(() => {
-            notificationManager.show('NYC Subway Alerts Pro loaded successfully!', 'success');
-        }, 500);
-
-        console.log('NYC Subway Alerts Pro initialized successfully');
-
-    } catch (error) {
-        console.error('Failed to initialize application:', error);
-        if (notificationManager) {
-            notificationManager.show('Application initialization failed', 'error');
-        }
-    }
-}
-
-/**
- * Add keyboard shortcuts
- */
-function addKeyboardShortcuts() {
-    document.addEventListener('keydown', (e) => {
-        // Ctrl/Cmd + R for refresh
-        if ((e.ctrlKey || e.metaKey) && e.key === 'r' && !e.shiftKey) {
-            e.preventDefault();
-            dataManager.refreshData();
-        }
         
-        // Escape to clear notifications
-        if (e.key === 'Escape') {
-            notificationManager.clearAll();
-        }
+        const totalLines = Object.keys(SUBWAY_LINE_COLORS).length;
+        const goodServiceLines = totalLines - linesWithIssues.size;
 
-        // G for geographic view, S for schematic view
-        if (e.key.toLowerCase() === 'g' && !e.ctrlKey && !e.metaKey) {
-            mapManager.switchView('geo');
-        }
-        if (e.key.toLowerCase() === 's' && !e.ctrlKey && !e.metaKey) {
-            mapManager.switchView('schema');
-        }
-    });
-}
-
-/**
- * Handle page visibility changes for performance optimization
- */
-function handleVisibilityChange() {
-    if (document.hidden) {
-        dataManager.stopAutoRefresh();
-    } else {
-        dataManager.startAutoRefresh();
-        // Refresh data when page becomes visible again
-        dataManager.refreshData();
+        // Update DOM elements
+        document.getElementById('criticalCount').textContent = stats.critical;
+        document.getElementById('warningCount').textContent = stats.warning;
+        document.getElementById('infoCount').textContent = stats.info;
+        document.getElementById('goodServiceCount').textContent = goodServiceLines;
+        document.getElementById('rushHourCount').textContent = stats.rushHour;
     }
-}
-
-// ========== EVENT LISTENERS ==========
-// DOM Content Loaded
-document.addEventListener('DOMContentLoaded', initializeApp);
-
-// Page Visibility API
-document.addEventListener('visibilitychange', handleVisibilityChange);
-
-// Window unload cleanup
-window.addEventListener('beforeunload', () => {
-    if (dataManager) {
-        dataManager.stopAutoRefresh();
-    }
-});
-
-// Handle errors gracefully
-window.addEventListener('error', (e) => {
-    console.error('Application error:', e.error);
-    if (notificationManager) {
-        notificationManager.show('An error occurred. Please refresh the page.', 'error');
-    }
-});
-
-// ========== PUBLIC API ==========
-// Expose some functions globally for backwards compatibility
-window.NYCSubwayAlerts = {
-    refreshAlerts: () => dataManager?.refreshData(),
-    showAlert: (station) => mapManager?.handleStationClick(station),
-    showLineAlert: (line) => mapManager?.handleLineClick(line),
-    switchView: (view) => mapManager?.switchView(view),
-    resetFilters: () => filterManager?.resetFilters()
 };
 
-// Legacy function aliases for backwards compatibility
-window.refreshAlerts = () => window.NYCSubwayAlerts.refreshAlerts();
-window.showAlert = (station) => window.NYCSubwayAlerts.showAlert(station);
-window.showLineAlert = (line) => window.NYCSubwayAlerts.showLineAlert(line);
-window.switchView = (view) => window.NYCSubwayAlerts.switchView(view);
+// ========== EXPORT MANAGER ==========
+const ExportManager = {
+    /**
+     * Export alerts in specified format
+     * @param {string} format - Export format ('json' or 'csv')
+     */
+    export(format) {
+        const data = AppState.filteredAlerts.map(alert => ({
+            title: alert.title,
+            description: alert.description,
+            lines: alert.lines.join(', '),
+            severity: alert.severity,
+            timestamp: alert.timestamp.toISOString(),
+            affectedStations: alert.affectedStations.join(', '),
+            isRushHour: alert.isRushHour,
+            location: alert.location,
+            serviceReliability: alert.serviceReliability
+        }));
+
+        const filename = `subway-alerts.${format}`;
+        
+        if (format === 'json') {
+            Utils.downloadFile(JSON.stringify(data, null, 2), filename, 'application/json');
+        } else if (format === 'csv') {
+            const csv = Utils.convertToCSV(data);
+            Utils.downloadFile(csv, filename, 'text/csv');
+        }
+        
+        NotificationManager.show(
+            `${Utils.translate('exported')} ${data.length} ${Utils.translate('alertsAs')} ${format.toUpperCase()}`,
+            'success'
+        );
+    },
+
+    /**
+     * Print alerts
+     */
+    print() {
+        window.print();
+    }
+};
+
+// ========== SHARE MANAGER ==========
+const ShareManager = {
+    /**
+     * Share alert summary
+     */
+    shareSummary() {
+        const summary = `${Utils.translate('title')} (${new Date().toLocaleDateString()})\n\n` +
+            `${Utils.translate('criticalAlerts')}: ${document.getElementById('criticalCount').textContent}\n` +
+            `${Utils.translate('warnings')}: ${document.getElementById('warningCount').textContent}\n` +
+            `${Utils.translate('serviceInfo')}: ${document.getElementById('infoCount').textContent}\n\n` +
+            `View full details at: ${window.location.href}`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: Utils.translate('title'),
+                text: summary,
+                url: window.location.href
+            });
+        } else {
+            navigator.clipboard.writeText(summary).then(() => {
+                NotificationManager.show(Utils.translate('summaryCopied'), 'success');
+            });
+        }
+    },
+
+    /**
+     * Share specific alert
+     * @param {string} alertId - ID of alert to share
+     */
+    shareAlert(alertId) {
+        const alert = AppState.currentAlerts.find(a => a.id === alertId);
+        if (!alert) return;
+
+        const alertText = `🚇 ${alert.title}\n\n${alert.description}\n\n` +
+            `${Utils.translate('filterByLine').replace(':', '')} ${alert.lines.join(', ')}\n` +
+            `${Utils.translate('filterBySeverity').replace(':', '')} ${Utils.translate(alert.severity).toUpperCase()}`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: alert.title,
+                text: alertText
+            });
+        } else {
+            navigator.clipboard.writeText(alertText).then(() => {
+                NotificationManager.show(Utils.translate('alertCopied'), 'success');
+            });
+        }
+    }
+};
+
+// ========== DIRECTIONS MANAGER ==========
+const DirectionsManager = {
+    /**
+     * Get directions to station
+     * @param {string} station - Station name
+     */
+    get(station) {
+        const query = encodeURIComponent(`${station} subway station NYC`);
+        window.open(`https://www.google.com/maps/search/${query}`, '_blank');
+    }
+};
+
+// ========== MAIN APPLICATION CONTROLLER ==========
+const App = {
+    /**
+     * Initialize the application
+     */
+    async init() {
+        this.setupEventListeners();
+        StorageManager.loadPreferences();
+        await AlertManager.load();
+        AlertManager.requestNotificationPermission();
+        UIManager.updateLanguage();
+        this.startAutoRefresh();
+    },
+
+    /**
+     * Setup all event listeners
+     */
+    setupEventListeners() {
+        // Filter event listeners
+        document.getElementById('lineFilter').addEventListener('change', () => {
+            StorageManager.savePreferences();
+            FilterManager.apply();
+        });
+        
+        document.getElementById('severityFilter').addEventListener('change', () => {
+            StorageManager.savePreferences();
+            FilterManager.apply();
+        });
+        
+        document.getElementById('timeFilter').addEventListener('change', () => {
+            StorageManager.savePreferences();
+            FilterManager.apply();
+        });
+        
+        document.getElementById('locationFilter').addEventListener('change', () => {
+            StorageManager.savePreferences();
+            FilterManager.apply();
+        });
+    },
+
+    /**
+     * Start automatic refresh
+     */
+    startAutoRefresh() {
+        setInterval(() => {
+            this.refreshAlerts();
+        }, REFRESH_INTERVAL);
+    },
+
+    /**
+     * Refresh alerts with UI feedback
+     */
+    async refreshAlerts() {
+        StorageManager.savePreferences();
+        
+        const refreshBtn = document.querySelector('.btn-primary');
+        const originalText = refreshBtn.innerHTML;
+        refreshBtn.innerHTML = `⏳ ${Utils.translate('refreshing')}`;
+        refreshBtn.disabled = true;
+        refreshBtn.style.opacity = '0.7';
+        
+        SoundManager.play('refresh');
+        await AlertManager.load();
+        
+        setTimeout(() => {
+            refreshBtn.innerHTML = Utils.translate('refresh');
+            refreshBtn.disabled = false;
+            refreshBtn.style.opacity = '1';
+        }, 1600);
+    },
+
+    /**
+     * Toggle rush hour mode
+     */
+    toggleRushHourMode() {
+        AppState.userPreferences.rushHourMode = !AppState.userPreferences.rushHourMode;
+        
+        const button = document.querySelector('.quick-actions button:nth-child(2)');
+        button.style.background = AppState.userPreferences.rushHourMode ? 'var(--accent-blue)' : '';
+        button.style.color = AppState.userPreferences.rushHourMode ? 'white' : '';
+        
+        NotificationManager.show(
+            AppState.userPreferences.rushHourMode 
+                ? Utils.translate('rushHourModeOn') 
+                : Utils.translate('rushHourModeOff'),
+            'info'
+        );
+        
+        FilterManager.apply();
+        StorageManager.savePreferences();
+    },
+
+    /**
+     * Clear all preferences
+     */
+    clearPreferences() {
+        StorageManager.clearPreferences();
+        
+        // Reset state
+        AppState.userPreferences.soundEnabled = false;
+        AppState.userPreferences.rushHourMode = false;
+        AppState.userPreferences.currentTheme = 'light';
+        AppState.userPreferences.currentFontSize = 'normal';
+        AppState.userPreferences.currentLanguage = 'en';
+        
+        // Reset form elements
+        document.getElementById('lineFilter').value = 'all';
+        document.getElementById('severityFilter').value = 'all';
+        document.getElementById('timeFilter').value = 'all';
+        document.getElementById('locationFilter').value = 'all';
+        document.getElementById('languageSelector').value = 'en';
+        
+        // Apply defaults
+        ThemeManager.apply('light');
+        SoundManager.applySoundSettings();
+        FontManager.apply('normal');
+        UIManager.updateLanguage();
+        FilterManager.apply();
+        
+        NotificationManager.show(Utils.translate('preferencesCleared'), 'info');
+    }
+};
+
+// ========== GLOBAL FUNCTION BINDINGS ==========
+// These functions are called from the HTML onclick attributes
+
+/**
+ * Change application language
+ * @param {string} language - Language code
+ */
+function changeLanguage(language) {
+    AppState.userPreferences.currentLanguage = language;
+    UIManager.updateLanguage();
+    StorageManager.savePreferences();
+    NotificationManager.show(Utils.translate('alertsRefreshed'), 'success');
+}
+
+/**
+ * Toggle theme between light and dark
+ */
+function toggleTheme() {
+    ThemeManager.toggle();
+}
+
+/**
+ * Change font size
+ * @param {string} size - Font size
+ */
+function changeFontSize(size) {
+    FontManager.change(size);
+}
+
+/**
+ * Toggle sound on/off
+ */
+function toggleSounds() {
+    AppState.userPreferences.soundEnabled = !AppState.userPreferences.soundEnabled;
+    SoundManager.applySoundSettings();
+    StorageManager.savePreferences();
+    NotificationManager.show(
+        AppState.userPreferences.soundEnabled 
+            ? Utils.translate('soundsEnabled') 
+            : Utils.translate('soundsDisabled'),
+        'info'
+    );
+}
+
+/**
+ * Apply sound settings to UI
+ */
+SoundManager.applySoundSettings = function() {
+    const toggle = document.getElementById('soundToggle');
+    toggle.classList.toggle('active', AppState.userPreferences.soundEnabled);
+};
+
+/**
+ * Refresh alerts
+ */
+function refreshAlerts() {
+    App.refreshAlerts();
+}
+
+/**
+ * Toggle rush hour mode
+ */
+function toggleRushHourMode() {
+    App.toggleRushHourMode();
+}
+
+/**
+ * Clear all preferences
+ */
+function clearPreferences() {
+    App.clearPreferences();
+}
+
+/**
+ * Request user location
+ */
+function requestLocation() {
+    LocationManager.request();
+}
+
+/**
+ * Export alerts
+ * @param {string} format - Export format
+ */
+function exportAlerts(format) {
+    ExportManager.export(format);
+}
+
+/**
+ * Print alerts
+ */
+function printAlerts() {
+    ExportManager.print();
+}
+
+/**
+ * Share alert summary
+ */
+function shareAlert() {
+    ShareManager.shareSummary();
+}
+
+// ========== APPLICATION STARTUP ==========
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+});
