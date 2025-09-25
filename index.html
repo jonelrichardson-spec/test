@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC Subway Alerts Pro</title>
+    <!-- External CDN Links -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Local Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header">
+            <h1>🚇 NYC Subway Alerts Pro</h1>
+            <p>Real-time service alerts with interactive maps</p>
+        </header>
+
+        <!-- Controls Section -->
+        <div class="controls">
+            <div class="control-group">
+                <label for="lineFilter">Filter by Line:</label>
+                <select id="lineFilter">
+                    <option value="all">All Lines</option>
+                    <option value="456">4, 5, 6</option>
+                    <option value="L">L</option>
+                    <option value="NQR">N, Q, R</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="severityFilter">Filter by Severity:</label>
+                <select id="severityFilter">
+                    <option value="all">All Severities</option>
+                    <option value="critical">Critical Only</option>
+                    <option value="warning">Warnings</option>
+                </select>
+            </div>
+
+            <button class="btn-primary" id="refreshBtn">🔄 Refresh</button>
+        </div>
+
+        <!-- Statistics Section -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number critical" id="criticalCount">2</div>
+                <div>Critical Alerts</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number warning" id="warningCount">3</div>
+                <div>Warnings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number info" id="infoCount">1</div>
+                <div>Service Info</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number good" id="goodCount">18</div>
+                <div>Good Service</div>
+            </div>
+        </div>
+
+        <!-- Interactive Map Section -->
+        <div class="map-section">
+            <div class="map-header">
+                <h3>🗺️ Interactive NYC Subway Map</h3>
+                <div class="view-toggle">
+                    <button class="map-view-btn active" data-view="geo">🌍 Geographic</button>
+                    <button class="map-view-btn" data-view="schema">🚇 Schematic</button>
+                </div>
+            </div>
+            
+            <div class="map-container">
+                <!-- Geographic Map View -->
+                <div id="geoMap" class="map-view active">
+                    <div class="map-canvas">
+                        <svg viewBox="0 0 800 400" class="map-svg">
+                            <g class="boroughs">
+                                <path d="M 200 100 L 350 90 L 380 140 L 350 180 L 280 190 L 200 160 Z" 
+                                      fill="rgba(0,48,135,0.1)" stroke="#e2e8f0" stroke-width="2" 
+                                      class="borough" data-borough="manhattan">
+                                    <title>Manhattan</title>
+                                </path>
+                                <path d="M 350 180 L 450 160 L 500 220 L 400 260 L 350 220 Z" 
+                                      fill="rgba(0,48,135,0.08)" stroke="#e2e8f0" stroke-width="2" 
+                                      class="borough" data-borough="brooklyn">
+                                    <title>Brooklyn</title>
+                                </path>
+                                <path d="M 450 100 L 550 90 L 580 140 L 520 160 L 450 150 Z" 
+                                      fill="rgba(0,48,135,0.06)" stroke="#e2e8f0" stroke-width="2" 
+                                      class="borough" data-borough="queens">
+                                    <title>Queens</title>
+                                </path>
+                            </g>
+                            
+                            <g class="stations">
+                                <circle cx="275" cy="140" r="8" fill="#dc2626" stroke="white" stroke-width="3" 
+                                        class="station-marker critical" data-station="Union Sq">
+                                    <title>Union Square - Critical Issues</title>
+                                </circle>
+                                <circle cx="290" cy="150" r="6" fill="#f59e0b" stroke="white" stroke-width="2" 
+                                        class="station-marker warning" data-station="14 St">
+                                    <title>14th Street - Service Warning</title>
+                                </circle>
+                                <circle cx="320" cy="155" r="6" fill="#9ca3af" stroke="white" stroke-width="2" 
+                                        class="station-marker disrupted" data-station="8 Ave">
+                                    <title>8th Avenue - Service Disrupted</title>
+                                </circle>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+                
+                <!-- Schematic Map View -->
+                <div id="schemaMap" class="map-view">
+                    <div class="map-canvas">
+                        <svg viewBox="0 0 800 400" class="map-svg">
+                            <g class="lines">
+                                <line x1="100" y1="80" x2="700" y2="320" stroke="#00933C" stroke-width="8" 
+                                      class="subway-line" data-line="456"/>
+                                <line x1="200" y1="200" x2="600" y2="200" stroke="#a7a9ac" stroke-width="6" 
+                                      class="subway-line" stroke-dasharray="20,10" data-line="L"/>
+                                <line x1="300" y1="100" x2="500" y2="300" stroke="#eab308" stroke-width="6" 
+                                      class="subway-line" data-line="NQR"/>
+                            </g>
+                            
+                            <g class="stations">
+                                <g class="station-group" data-station="Union Sq">
+                                    <circle cx="350" cy="200" r="12" fill="white" stroke="#333" stroke-width="3"/>
+                                    <circle cx="350" cy="200" r="8" fill="#dc2626"/>
+                                    <text x="370" y="195" class="station-label">Union Sq</text>
+                                    <text x="370" y="210" class="station-lines">4,5,6</text>
+                                </g>
+                                
+                                <g class="station-group" data-station="14 St">
+                                    <circle cx="250" cy="220" r="10" fill="white" stroke="#333" stroke-width="2"/>
+                                    <circle cx="250" cy="220" r="6" fill="#f59e0b"/>
+                                    <text x="270" y="215" class="station-label">14 St</text>
+                                    <text x="270" y="228" class="station-lines">L</text>
+                                </g>
+                                
+                                <g class="station-group" data-station="Times Sq">
+                                    <circle cx="300" cy="150" r="10" fill="white" stroke="#333" stroke-width="2"/>
+                                    <circle cx="300" cy="150" r="6" fill="#16a34a"/>
+                                    <text x="320" y="145" class="station-label">Times Sq</text>
+                                    <text x="320" y="158" class="station-lines">N,Q,R</text>
+                                </g>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Map Legend -->
+            <div class="map-legend">
+                <div class="legend-item">
+                    <div class="legend-indicator critical"></div>
+                    <span>Critical Issues</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-indicator warning"></div>
+                    <span>Service Warnings</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-indicator normal"></div>
+                    <span>Normal Service</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-indicator disrupted"></div>
+                    <span>Service Disrupted</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Container -->
+        <div class="alerts-container" id="alertsContainer">
+            <!-- Critical Alert -->
+            <div class="alert-card critical" data-severity="critical" data-lines="456">
+                <div class="alert-header">
+                    <div>
+                        <span class="line-badge" style="background:#00933C;">4</span>
+                        <span class="line-badge" style="background:#00933C;">5</span>
+                        <span class="line-badge" style="background:#00933C;">6</span>
+                    </div>
+                    <span class="severity-badge critical">Critical</span>
+                </div>
+                <div class="alert-content">
+                    <h3 class="alert-title">Service Disruption on 4, 5, 6 Lines</h3>
+                    <p class="alert-description">Due to signal problems at Union Square, expect delays in both directions. Trains are operating with increased travel time of 15-20 minutes.</p>
+                </div>
+            </div>
+
+            <!-- Warning Alert -->
+            <div class="alert-card warning" data-severity="warning" data-lines="L">
+                <div class="alert-header">
+                    <div>
+                        <span class="line-badge" style="background:#a7a9ac;">L</span>
+                    </div>
+                    <span class="severity-badge warning">Warning</span>
+                </div>
+                <div class="alert-content">
+                    <h3 class="alert-title">Weekend Service Changes</h3>
+                    <p class="alert-description">L train is not running between 14 St-Union Sq and 8 Av due to planned maintenance work. Free shuttle bus service is available.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container (dynamically populated) -->
+    <div id="notificationContainer"></div>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
